@@ -218,44 +218,57 @@ export function CartScreen() {
           <div className="px-6 py-6 md:px-0 space-y-4">
         {cart.map((item) => (
           <div
-            key={item.id}
-            className="bg-white rounded-2xl p-4 flex items-center justify-between shadow-sm"
+            key={`${item.id}-${item.portion || 'regular'}`}
+            className="bg-white rounded-2xl p-4 flex flex-col gap-2 shadow-sm"
           >
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-[#1A1A1A] mb-1">
-                {item.name}
-              </h3>
-              <p className="text-[#1A1A1A] font-semibold">₹{item.price}</p>
-            </div>
+            {/* Top Row: Item Name */}
+            <h3 className="text-base font-semibold text-[#1A1A1A] w-full">
+              {item.name}
+            </h3>
 
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3 bg-[#F5F5F5] rounded-lg px-3 py-2">
-                <button
-                  onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                  className="text-[#1A1A1A] font-bold text-xl w-6 h-6 flex items-center justify-center"
-                >
-                  −
-                </button>
-                <span className="text-[#1A1A1A] font-semibold w-6 text-center">
-                  {item.quantity}
-                </span>
-                <button
-                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                  className="text-[#1A1A1A] font-bold text-xl w-6 h-6 flex items-center justify-center"
-                >
-                  +
-                </button>
+            {/* Bottom Row: Details and Actions */}
+            <div className="flex items-end justify-between w-full">
+              
+              {/* Left side: Portion and Price */}
+              <div className="flex flex-col">
+                {item.portion && (
+                  <p className="text-xs text-[#6B6B6B] capitalize mb-1">
+                    {item.portion} plate
+                  </p>
+                )}
+                <p className="text-sm text-[#1A1A1A] font-semibold">₹{item.price}</p>
               </div>
 
-              <button
-                onClick={() => removeFromCart(item.id)}
-                className="p-2 hover:bg-red-50 rounded-lg transition-colors"
-              >
-                <Trash2 size={20} className="text-[#FF0031]" />
-              </button>
+              {/* Right side: Quantity and Trash */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-[#F5F5F5] rounded-lg px-2 py-1.5">
+                  <button
+                    onClick={() => updateQuantity(item.id, item.quantity - 1, item.portion)}
+                    className="text-[#1A1A1A] font-bold text-lg w-6 h-6 flex items-center justify-center"
+                  >
+                    −
+                  </button>
+                  <span className="text-[#1A1A1A] text-sm font-semibold w-5 text-center">
+                    {item.quantity}
+                  </span>
+                  <button
+                    onClick={() => updateQuantity(item.id, item.quantity + 1, item.portion)}
+                    className="text-[#1A1A1A] font-bold text-lg w-6 h-6 flex items-center justify-center"
+                  >
+                    +
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => removeFromCart(item.id, item.portion)}
+                  className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <Trash2 size={18} className="text-[#FF0031]" />
+                </button>
+              </div>
             </div>
-            </div>
-          ))}
+          </div>
+        ))}
         </div>
       </div>
 

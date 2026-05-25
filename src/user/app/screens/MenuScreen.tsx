@@ -22,6 +22,7 @@ export function MenuScreen() {
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [showReadMore, setShowReadMore] = useState(false);
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const descRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
@@ -198,7 +199,7 @@ export function MenuScreen() {
             <p
               ref={descRef}
               className={`leading-relaxed transition-all ${
-                isDescExpanded ? "" : "line-clamp-3"
+                isDescExpanded ? "" : "line-clamp-2"
               }`}
             >
               {restaurant.description}
@@ -432,7 +433,27 @@ export function MenuScreen() {
                       </h3>
                     </div>
 
-                    <p className="text-[#6B6B6B] text-sm mb-3">{item.description}</p>
+                    <p
+                      className={`text-[#6B6B6B] text-sm mb-3 ${expandedItemId === item.id ? "" : "line-clamp-2"}`}
+                    >
+                      {item.description}
+                    </p>
+                    {expandedItemId !== item.id && (
+                      <button
+                        onClick={() => setExpandedItemId(item.id)}
+                        className="text-[#FF0031] font-semibold mt-1 focus:outline-none hover:underline"
+                      >
+                        Read more...
+                      </button>
+                    )}
+                    {expandedItemId === item.id && (
+                      <button
+                        onClick={() => setExpandedItemId(null)}
+                        className="text-[#FF0031] font-semibold mt-1 focus:outline-none hover:underline"
+                      >
+                        Read less
+                      </button>
+                    )}
 
                     {/* Price display based on item type */}
                     {item.hasPortions ? (
