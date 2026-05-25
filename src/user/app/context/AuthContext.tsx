@@ -22,11 +22,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
-    let { data: profileData, error } = await supabase
+    const { data, error } = await supabase
       .from('userProfile')
       .select('*')
       .eq('id', userId)
       .single();
+    let profileData = data;
 
     if (error && error.code === 'PGRST116') {
       // Create missing profile

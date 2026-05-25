@@ -1,11 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, CheckCircle2, Clock, ChefHat, PackageCheck, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, PackageCheck, Plus, Loader2 } from "lucide-react";
 import { BottomNav } from "@/app/components/BottomNav";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
-
-type OrderStatus = "confirmed" | "preparing" | "ready";
 
 export function OrderStatusScreen() {
   const navigate = useNavigate();

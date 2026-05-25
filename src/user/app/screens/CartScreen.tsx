@@ -10,9 +10,14 @@ type OrderType = "pre-booking" | "takeaway" | "dine-in";
 
 export function CartScreen() {
   const navigate = useNavigate();
-  const { cart, updateQuantity, removeFromCart, getTotalPrice, restaurantId } = useCart();
+  const { cart, updateQuantity, removeFromCart, getTotalPrice, restaurantId, clearCart } = useCart();
   const { isAdminOwner } = useAuth();
   const [selectedOrderType, setSelectedOrderType] = useState<OrderType>("pre-booking");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const qrTable = sessionStorage.getItem("qr_table_number");
+  const qrRestaurantId = sessionStorage.getItem("qr_restaurant_id");
+  const isQROrder = qrTable && qrRestaurantId === restaurantId;
 
   const totalAmount = getTotalPrice();
 
@@ -39,13 +44,89 @@ export function CartScreen() {
     fetchRestaurant();
   }, [restaurantId]);
 
-  const handleConfirmOrder = () => {
+  const handleConfirmOrder = async () => {
+    if (isQROrder) {
+      await placeQROrder();
+      return;
+    }
+
     if (selectedOrderType === "pre-booking") {
       navigate('/pre-order-details');
     } else if (selectedOrderType === "takeaway") {
       navigate('/takeaway-details');
     } else if (selectedOrderType === "dine-in") {
       navigate('/dine-in-details');
+    }
+  };
+
+  const placeQROrder = async () => {
+    setIsSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      let customerName: string | null = null;
+      let customerPhone: string | null = null;
+
+      if (user?.id) {
+        const { data: profileData } = await supabase
+          .from('userProfile')
+          .select('full_name, phone')
+          .eq('id', user.id)
+          .maybeSingle();
+        customerName = profileData?.full_name || user.user_metadata?.full_name || null;
+        customerPhone = profileData?.phone || null;
+      }
+
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          user_uid: user?.id || null,
+          customer_name: customerName,
+          customer_phone: customerPhone,
+          order_type: 'QR-Code',
+          total_amount: totalAmount,
+          table_number: qrTable,
+          status: 'pending',
+          otp: otp,
+          restaurant_id: restaurantId,
+          number_of_people: 1 // Default for QR
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      const orderItems = cart.map(item => ({
+        order_id: orderData.id,
+        menu_item_id: item.id,
+        quantity: item.quantity,
+        portion: item.portion || null
+      }));
+
+      const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
+      if (itemsError) throw itemsError;
+
+      // Clear QR session state after successful order
+      sessionStorage.removeItem("qr_order_type");
+      sessionStorage.removeItem("qr_table_number");
+      sessionStorage.removeItem("qr_restaurant_id");
+
+      clearCart();
+      
+      const params = new URLSearchParams({
+        orderId: orderData.id,
+        otp: otp,
+        total: totalAmount.toString(),
+        orderType: "QR-Code",
+        table: qrTable!
+      });
+
+      navigate(`/order-confirmation?${params.toString()}`);
+    } catch (error: any) {
+      console.error('Order Error:', error);
+      alert(`Failed to place order: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -81,9 +162,10 @@ export function CartScreen() {
         <p className="text-[#6B6B6B] text-sm">{cart.length} items</p>
       </div>
 
-      {/* Order Type Options - Compact */}
-      <div className="bg-white px-6 py-4 shadow-sm">
-        <div className="flex gap-2">
+      {/* Order Type Options - Compact (Hidden if QR Order) */}
+      {!isQROrder && (
+        <div className="bg-white px-6 py-4 shadow-sm">
+          <div className="flex gap-2">
           <button
             onClick={() => restaurant?.services.preBooking && setSelectedOrderType("pre-booking")}
             disabled={!restaurant?.services.preBooking}
@@ -127,7 +209,8 @@ export function CartScreen() {
             Dine-In
           </button>
         </div>
-      </div>
+        </div>
+      )}
 
       <div className="flex flex-col md:flex-row gap-6 max-w-7xl mx-auto md:px-12">
         <div className="flex-1">
@@ -188,10 +271,12 @@ export function CartScreen() {
 
           <button
             onClick={handleConfirmOrder}
-            disabled={isAdminOwner}
+            disabled={isAdminOwner || isSubmitting}
             className={`w-full ${isAdminOwner ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#FF0031] hover:bg-[#E5002C]'} text-white rounded-xl py-4 font-medium transition-colors shadow-lg`}
           >
             {isAdminOwner ? "Ordering Disabled (Admin View)" : 
+              isSubmitting ? "Placing Order..." :
+              isQROrder ? `Place Order for Table ${qrTable}` :
               selectedOrderType === "pre-booking" ? "Confirm Pre-Order" :
               selectedOrderType === "takeaway" ? "Confirm Takeaway" :
               "Confirm Dine-In"}

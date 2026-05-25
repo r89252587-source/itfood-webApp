@@ -138,7 +138,7 @@ export function ProfileScreen() {
                   {profileData?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User"}
                 </h2>
               )}
-              <p className="text-white/80 text-sm">QuickBite Member</p>
+              <p className="text-white/80 text-sm">itFood Member</p>
             </div>
             {isEditing ? (
               <button onClick={handleSaveProfile} disabled={savingProfile} className="px-3 py-1 bg-white text-[#FF0031] rounded-lg font-medium text-sm">
@@ -305,7 +305,7 @@ export function ProfileScreen() {
 
         {/* App Info */}
         <div className="bg-white rounded-2xl p-5 shadow-sm text-center">
-          <p className="text-sm text-[#6B6B6B] mb-1">QuickBite Version</p>
+          <p className="text-sm text-[#6B6B6B] mb-1">itFood Version</p>
           <p className="font-semibold text-[#1A1A1A]">1.0.0</p>
         </div>
 

@@ -24,18 +24,21 @@ export function OrderConfirmationScreen() {
   const getOrderTypeLabel = () => {
     if (orderType === "takeaway") return "Takeaway";
     if (orderType === "dine-in") return "Dine-In Reservation";
+    if (orderType === "QR-Code") return "Table Order";
     return "Pre-Order";
   };
 
   const getSuccessMessage = () => {
     if (orderType === "takeaway") return "Your takeaway order has been placed successfully";
     if (orderType === "dine-in") return "Your table has been reserved successfully";
+    if (orderType === "QR-Code") return "Your table order has been placed successfully";
     return "Your pre-order has been placed successfully";
   };
 
   const getInstructionMessage = () => {
     if (orderType === "takeaway") return "Your food will be ready for pickup at the selected time. Show this OTP to the staff when collecting.";
     if (orderType === "dine-in") return "Your table is reserved. Show this OTP to the staff when you arrive at the restaurant.";
+    if (orderType === "QR-Code") return "Your food will be prepared and served to your table.";
     return "Your food will be ready when you arrive. Just show this OTP to the staff.";
   };
 
@@ -75,7 +78,7 @@ export function OrderConfirmationScreen() {
             <div className="flex items-center justify-between">
               <span className="text-[#6B6B6B]">Order Type</span>
               <span className="font-semibold text-[#FF0031] capitalize">
-                {orderType === "pre-booking" ? "Pre-Booking" : orderType === "takeaway" ? "Takeaway" : "Dine-In"}
+                {orderType === "pre-booking" ? "Pre-Booking" : orderType === "takeaway" ? "Takeaway" : orderType === "QR-Code" ? "Table Order" : "Dine-In"}
               </span>
             </div>
             <div className="flex items-center justify-between">
@@ -126,7 +129,7 @@ export function OrderConfirmationScreen() {
         {/* Instructions */}
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 w-full max-w-sm">
           <h3 className="font-semibold text-[#1A1A1A] mb-2">
-            📱 {orderType === "dine-in" ? "Your Table is Reserved" : "Show this Order ID"}
+            📱 {orderType === "dine-in" ? "Your Table is Reserved" : orderType === "QR-Code" ? "Sit back and relax" : "Show this Order ID"}
           </h3>
           <p className="text-sm text-[#6B6B6B]">
             {getInstructionMessage()}

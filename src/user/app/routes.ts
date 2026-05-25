@@ -12,6 +12,7 @@ import { OrderListScreen } from "@/app/screens/OrderListScreen";
 import { OrderStatusScreen } from "@/app/screens/OrderStatusScreen";
 import { ProfileScreen } from "@/app/screens/ProfileScreen";
 import { CompleteProfileScreen } from "@/app/screens/CompleteProfileScreen";
+import { QRScanScreen } from "@/app/screens/QRScanScreen";
 
 export const router = createBrowserRouter([
   {
@@ -65,5 +66,9 @@ export const router = createBrowserRouter([
   {
     path: "/complete-profile",
     Component: CompleteProfileScreen,
+  },
+  {
+    path: "/qr/:qrId",
+    Component: QRScanScreen,
   },
 ]);

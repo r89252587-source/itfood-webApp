@@ -36,7 +36,14 @@ export function CompleteProfileScreen() {
       }).eq('id', user.id);
 
       await refreshProfile();
-      navigate("/restaurants");
+      
+      const redirectUrl = sessionStorage.getItem("post_login_redirect");
+      if (redirectUrl) {
+        sessionStorage.removeItem("post_login_redirect");
+        navigate(redirectUrl);
+      } else {
+        navigate("/restaurants");
+      }
     } catch (error) {
       console.error("Error updating profile:", error);
       alert("Failed to save profile details");
@@ -89,7 +96,7 @@ export function CompleteProfileScreen() {
             disabled={loading}
             className="w-full py-4 bg-[#FF0031] text-white rounded-xl font-medium shadow-lg shadow-[#FF0031]/25 hover:bg-[#E5002C] transition-colors disabled:opacity-70 mt-4"
           >
-            {loading ? "Saving..." : "Continue to Restaurants"}
+            {loading ? "Saving..." : "Continue"}
           </button>
         </form>
       </div>

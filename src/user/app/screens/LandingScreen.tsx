@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router";
 import { Utensils, CalendarClock, ShoppingBag, UtensilsCrossed, ArrowRight, Store } from "lucide-react";
+import itFoodLogo from "../../../../graphic/itfood-icon.png";
 
 export function LandingScreen() {
   const navigate = useNavigate();
@@ -29,12 +30,27 @@ export function LandingScreen() {
     <div className="min-h-screen bg-white flex flex-col">
       {/* Navigation / Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b border-gray-100 max-w-7xl mx-auto w-full">
-        <div className="flex items-center gap-2">
-          <div className="bg-[#FF0031] rounded-full p-2">
-            <Utensils size={24} className="text-white" strokeWidth={2.5} />
+        <div className="flex items-center gap-3">
+          <div className="bg-white rounded-full p-1 border shadow-sm">
+            <img
+              src={itFoodLogo}
+              alt="itFood Logo"
+              className="w-8 h-8 object-contain"
+            />
           </div>
-          <span className="text-xl font-bold text-[#1A1A1A]">QuickBite</span>
+
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-extrabold text-[#1A1A1A] tracking-tight">
+              itFood
+            </span>
+
+            <p className="text-gray-500 text-lg font-medium">
+              - Scan • Order • Enjoy
+            </p>
+          </div>
         </div>
+
+        
         <button
           onClick={() => navigate("/login")}
           className="px-6 py-2 bg-gray-100 text-[#1A1A1A] rounded-full font-medium hover:bg-gray-200 transition-colors"
@@ -73,7 +89,7 @@ export function LandingScreen() {
                 Choose the dining experience that fits your schedule perfectly.
               </p>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {features.map((feature, index) => {
                 const Icon = feature.icon;
@@ -97,19 +113,20 @@ export function LandingScreen() {
       {/* Footer Section */}
       <footer className="bg-white border-t border-gray-100 py-12 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-2 opacity-80">
-            <Utensils size={20} className="text-[#1A1A1A]" />
-            <span className="font-bold text-[#1A1A1A]">QuickBite</span>
+          <div className="flex items-baseline gap-2 opacity-80">
+            <img src={itFoodLogo} alt="itFood Logo" className="w-5 h-5 object-contain self-center" />
+            <span className="text-xl font-bold text-[#1A1A1A]">itFood</span>
+            <span className="text-sm font-medium text-[#6B6B6B]">- Scan • Order • Enjoy</span>
           </div>
-          
+
           <div className="text-sm text-[#6B6B6B]">
-            © {new Date().getFullYear()} QuickBite. All rights reserved.
+            © {new Date().getFullYear()} itFood. All rights reserved.
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-4">
             <span className="text-sm text-[#6B6B6B]">Are you a restaurant partner?</span>
-            <a 
-              href="/admin" 
+            <a
+              href="/admin"
               className="flex items-center gap-2 px-5 py-2.5 bg-[#1A1A1A] text-white rounded-lg font-medium hover:bg-black transition-colors"
             >
               <Store size={18} />

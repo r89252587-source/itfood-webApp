@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Utensils } from "lucide-react";
+import itFoodLogo from "../../../../graphic/itfood-icon.png";
 
 export function SplashScreen() {
   const navigate = useNavigate();
@@ -8,7 +9,7 @@ export function SplashScreen() {
   useEffect(() => {
     const timer = setTimeout(() => {
       navigate("/login");
-    }, 10000);
+    }, 1000);
 
     return () => clearTimeout(timer);
   }, [navigate]);
@@ -17,16 +18,19 @@ export function SplashScreen() {
     <div className="min-h-screen bg-[#FF0031] flex flex-col items-center justify-center px-6">
       <div className="flex flex-col items-center gap-6">
         <div className="bg-white rounded-full p-8 shadow-2xl">
-          <Utensils size={64} className="text-[#FF0031]" strokeWidth={2} />
+          <img src={itFoodLogo} alt="itFood Logo" className="w-24 h-24 object-cover" />
+
         </div>
-        
-        <h1 className="text-white text-4xl font-bold">QuickBite</h1>
-        
+
+        <h1 className="text-white text-4xl font-bold">itFood</h1>
+
         <p className="text-white/90 text-lg text-center max-w-xs">
+          Scan • Order • Enjoy <br />
           Order before you arrive
         </p>
+
       </div>
-      
+
       <div className="mt-12">
         <div className="flex gap-2">
           <div className="w-2 h-2 bg-white/50 rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></div>

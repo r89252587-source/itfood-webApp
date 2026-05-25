@@ -26,11 +26,12 @@ export default function App() {
   const loadProfile = async (user: User) => {
     try {
       setError(null);
-      let { data, error: profileError } = await supabase
+      const { data, error: profileError } = await supabase
         .from('adminProfile')
         .select('*')
         .eq('id', user.id)
         .single();
+      let profileData = data;
 
       if (profileError && profileError.code === 'PGRST116') {
         // Create new profile if one doesn't exist
@@ -47,12 +48,12 @@ export default function App() {
           .single();
 
         if (createError) throw createError;
-        data = newProfile;
+        profileData = newProfile;
       } else if (profileError) {
         throw profileError;
       }
 
-      setProfile(data as Profile);
+      setProfile(profileData as Profile);
     } catch (err: any) {
       console.error('Profile error:', err);
       setError(err.message || 'Failed to load user profile. Please try again.');
@@ -97,11 +98,15 @@ export default function App() {
 
   const loginWithGoogle = async () => {
     setAuthError(null);
+    window.localStorage.setItem('oauth_target', 'admin');
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/admin` },
+      options: { redirectTo: window.location.origin },
     });
-    if (error) setAuthError(error.message);
+    if (error) {
+      window.localStorage.removeItem('oauth_target');
+      setAuthError(error.message);
+    }
   };
 
   const signOut = async () => {

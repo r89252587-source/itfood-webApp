@@ -3,9 +3,11 @@ import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ShoppingBag, BookOpen, Store, BarChart2,
   Users, LogOut, Utensils, Bell, Package, Clock,
-  RefreshCw, Check, X, Plus, Edit2, Trash2, Save, IndianRupee, Menu
+  RefreshCw, Check, X, Plus, Edit2, Trash2, Save, IndianRupee, Menu, QrCode
 } from 'lucide-react';
+import QRManagementView from './QRManagement';
 import { supabase } from '../lib/supabase';
+import itFoodLogo from "../../../graphic/itfood-icon.png";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -152,6 +154,7 @@ export default function Dashboard({ session: _session, profile, onSignOut }: { s
           <Route path="/menu" element={<MenuManagementView menuItems={menuItems} fetchMenu={fetchMenu} restaurantId={restaurant?.id} />} />
           <Route path="/restaurants" element={<SettingsView restaurant={restaurant} fetchRestaurant={fetchRestaurantData} onProfileCompleted={() => navigate('/', { replace: true })} />} />
           <Route path="/analytics" element={<AnalyticsView orders={orders} />} />
+          <Route path="/qrcodes" element={<QRManagementView restaurantId={restaurant?.id} />} />
         </Routes>
       </main>
     </div>
@@ -165,14 +168,15 @@ function Sidebar({ currentView, setView, onSignOut, isOpen }: { currentView: str
     { id: 'orders', icon: ShoppingBag, label: 'Orders' },
     { id: 'menu', icon: BookOpen, label: 'Menu Management' },
     { id: 'restaurants', icon: Store, label: 'Restaurants' },
+    { id: 'qrcodes', icon: QrCode, label: 'QR Codes' },
     { id: 'analytics', icon: BarChart2, label: 'Analytics' },
   ];
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="logo">
-        <Utensils />
-        <span>QuickBite</span>
+        <img src={itFoodLogo} alt="itFood Logo" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+        <span>itFood - admin</span>
       </div>
       <ul className="nav-links">
         {links.map(link => (
@@ -207,6 +211,7 @@ function Header({ viewTitle, userProfile, onMenuClick, onSignOut }: { viewTitle:
     orders: 'Orders Management',
     menu: 'Menu Management',
     restaurants: 'Restaurant Settings',
+    qrcodes: 'QR Management',
     analytics: 'Analytics & Reports'
   };
 
@@ -418,75 +423,76 @@ function OrdersTable({ orders, onUpdate }: { orders: any[], onUpdate: () => void
     <div>
       <div className="table-responsive order-table-desktop">
         <table className="modern-table">
-        <thead>
-          <tr>
-            <th>Order ID</th>
-            <th>Customer</th>
-            <th>Type</th>
-            <th>Amount</th>
-            <th>Status</th>
-            <th>Date & Time</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.length === 0 ? (
+          <thead>
             <tr>
-              <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                No orders found
-              </td>
+              <th>Order ID</th>
+              <th>Customer</th>
+              <th>Type</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Date & Time</th>
+              <th>Actions</th>
             </tr>
-          ) : orders.map((order, idx) => (
-            <tr
-              key={order.id}
-              style={{ animationDelay: `${idx * 0.05}s`, cursor: 'pointer' }}
-              className="table-row-animate hover-row"
-              onClick={() => setViewingOrder(order)}
-            >
-              <td className="font-medium text-main">#{order.id.slice(0, 8).toUpperCase()}</td>
-              <td>
-                <div className="customer-cell">
-                  <div className="customer-avatar">G</div>
-                  <div className="customer-info">
-                    <span className="customer-name">Guest User</span>
-                    <span className="customer-id">ID: {order.id.slice(0, 4)}</span>
+          </thead>
+          <tbody>
+            {orders.length === 0 ? (
+              <tr>
+                <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                  No orders found
+                </td>
+              </tr>
+            ) : orders.map((order, idx) => (
+              <tr
+                key={order.id}
+                style={{ animationDelay: `${idx * 0.05}s`, cursor: 'pointer' }}
+                className="table-row-animate hover-row"
+                onClick={() => setViewingOrder(order)}
+              >
+                <td className="font-medium text-main">#{order.id.slice(0, 8).toUpperCase()}</td>
+                <td>
+                  <div className="customer-cell">
+                    <div className="customer-avatar">G</div>
+                    <div className="customer-info">
+                      <span className="customer-name">Guest User</span>
+                      <span className="customer-id">ID: {order.id.slice(0, 4)}</span>
+                    </div>
                   </div>
-                </div>
-              </td>
-              <td>
-                <span className="type-badge">
-                  {order.order_type === 'pre-booking' ? 'Pre Booking' : order.order_type}
-                </span>
-              </td>
-              <td className="font-bold">₹{order.total_amount}</td>
-              <td><span className={`modern-badge status-${order.status || 'pending'}`}>{order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : 'Pending'}</span></td>
-              <td className="text-muted">
-                <div style={{ fontWeight: 500 }}>{new Date(order.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-                <div style={{ fontSize: '0.8rem', marginTop: '0.2rem', color: '#94A3B8' }}>{new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-              </td>
-              <td>
-                <div className="action-buttons" onClick={e => e.stopPropagation()}>
-                  {(!order.status || order.status === 'pending') && (
-                    <>
-                      <button className="action-btn success tooltip" data-tip="Confirm" onClick={() => updateStatus(order.id, 'confirmed')}><Check size={16} /></button>
-                      <button className="action-btn danger tooltip" data-tip="Cancel" onClick={() => updateStatus(order.id, 'cancelled')}><X size={16} /></button>
-                    </>
-                  )}
-                  {order.status === 'confirmed' && (
-                    <button className="btn btn-primary premium-hover" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', borderRadius: '0.5rem' }} onClick={() => setVerifyingOrder(order)}>
-                      Verify & Complete
-                    </button>
-                  )}
-                  {order.status === 'completed' && order.otp_verified_at && (
-                    <span className="text-muted" style={{ fontSize: '0.75rem', display: 'block', marginTop: '0.2rem' }}>
-                      Verified: {new Date(order.otp_verified_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  )}
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
+                </td>
+                <td>
+                  <span className="type-badge" style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                    <span>{order.order_type === 'pre-booking' ? 'Pre Booking' : order.order_type === 'QR-Code' ? 'Table Order' : order.order_type}</span>
+                    {order.table_number && <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>Table {order.table_number}</span>}
+                  </span>
+                </td>
+                <td className="font-bold">₹{order.total_amount}</td>
+                <td><span className={`modern-badge status-${order.status || 'pending'}`}>{order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : 'Pending'}</span></td>
+                <td className="text-muted">
+                  <div style={{ fontWeight: 500 }}>{new Date(order.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                  <div style={{ fontSize: '0.8rem', marginTop: '0.2rem', color: '#94A3B8' }}>{new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                </td>
+                <td>
+                  <div className="action-buttons" onClick={e => e.stopPropagation()}>
+                    {(!order.status || order.status === 'pending') && (
+                      <>
+                        <button className="action-btn success tooltip" data-tip="Confirm" onClick={() => updateStatus(order.id, 'confirmed')}><Check size={16} /></button>
+                        <button className="action-btn danger tooltip" data-tip="Cancel" onClick={() => updateStatus(order.id, 'cancelled')}><X size={16} /></button>
+                      </>
+                    )}
+                    {order.status === 'confirmed' && (
+                      <button className="btn btn-primary premium-hover" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', borderRadius: '0.5rem' }} onClick={() => setVerifyingOrder(order)}>
+                        Verify & Complete
+                      </button>
+                    )}
+                    {order.status === 'completed' && order.otp_verified_at && (
+                      <span className="text-muted" style={{ fontSize: '0.75rem', display: 'block', marginTop: '0.2rem' }}>
+                        Verified: {new Date(order.otp_verified_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
         </table>
       </div>
 
@@ -510,7 +516,8 @@ function OrdersTable({ orders, onUpdate }: { orders: any[], onUpdate: () => void
               <div style={{ display: 'grid', gap: '0.35rem', fontSize: '0.85rem' }}>
                 <div><strong>Customer:</strong> {getCustomerName(order)}</div>
                 <div><strong>Phone:</strong> {getCustomerPhone(order)}</div>
-                <div><strong>Type:</strong> {order.order_type === 'pre-booking' ? 'Pre Booking' : order.order_type}</div>
+                <div><strong>Type:</strong> {order.order_type === 'pre-booking' ? 'Pre Booking' : order.order_type === 'QR-Code' ? 'Table Order' : order.order_type}</div>
+                {order.table_number && <div><strong>Table:</strong> {order.table_number}</div>}
                 <div><strong>Amount:</strong> ₹{order.total_amount}</div>
                 {expectedTime && <div><strong>Expected Time:</strong> {expectedTime}</div>}
                 {isDineIn && <div><strong>Persons:</strong> {people || 'Not provided'}</div>}
@@ -654,7 +661,8 @@ function OrderDetailsModal({ order, onClose }: { order: any, onClose: () => void
           <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem', background: '#F8FAFC', padding: '1rem', borderRadius: '0.75rem' }}>
             <div>
               <p className="text-muted text-xs uppercase tracking-wider mb-1">Order Type</p>
-              <p className="font-semibold text-main capitalize">{order.order_type === 'pre-booking' ? 'Pre Booking' : order.order_type}</p>
+              <p className="font-semibold text-main capitalize">{order.order_type === 'pre-booking' ? 'Pre Booking' : order.order_type === 'QR-Code' ? 'Table Order' : order.order_type}</p>
+              {order.table_number && <p className="text-sm text-muted font-medium mt-1">Table {order.table_number}</p>}
             </div>
             <div>
               <p className="text-muted text-xs uppercase tracking-wider mb-1">Total Amount</p>

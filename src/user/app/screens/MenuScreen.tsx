@@ -13,7 +13,8 @@ type OrderType = "pre-booking" | "takeaway" | "dine-in";
 export function MenuScreen() {
   const navigate = useNavigate();
   const { restaurantId } = useParams();
-  const { cart, addToCart, updateQuantity, getTotalItems, getTotalPrice, getItemQuantity, setRestaurantId } = useCart();
+  const { addToCart, updateQuantity, getTotalItems, getTotalPrice, getItemQuantity, setRestaurantId } = useCart();
+  const { user } = useAuth();
   const [activeCategory, setActiveCategory] = useState<Category>("all");
   const [activeFoodType, setActiveFoodType] = useState<FoodType>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -29,7 +30,6 @@ export function MenuScreen() {
     }
   }, [restaurantId, setRestaurantId]);
 
-  const { user } = useAuth();
   const [restaurant, setRestaurant] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -124,6 +124,24 @@ export function MenuScreen() {
 
     return categoryMatch && foodTypeMatch && searchMatch;
   });
+
+  const handleAddToCartAuth = (item: any) => {
+    if (!user) {
+      sessionStorage.setItem("post_login_redirect", `/menu/${restaurantId}`);
+      navigate("/login");
+      return;
+    }
+    addToCart(item);
+  };
+
+  const handleUpdateQuantityAuth = (id: string, quantity: number, portion?: "half" | "full") => {
+    if (!user) {
+      sessionStorage.setItem("post_login_redirect", `/menu/${restaurantId}`);
+      navigate("/login");
+      return;
+    }
+    updateQuantity(id, quantity, portion);
+  };
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] pb-24">
@@ -440,7 +458,7 @@ export function MenuScreen() {
                           <span className="text-xs text-[#6B6B6B] font-medium">Half</span>
                           {halfQuantity === 0 ? (
                             <button
-                              onClick={() => addToCart({ id: item.id, name: item.name, price: item.halfPrice, portion: "half" })}
+                              onClick={() => handleAddToCartAuth({ id: item.id, name: item.name, price: item.halfPrice, portion: "half" })}
                               className="px-6 py-2 bg-[#FF0031] text-white rounded-lg font-medium hover:bg-[#E5002C] transition-colors"
                             >
                               Add
@@ -448,7 +466,7 @@ export function MenuScreen() {
                           ) : (
                             <div className="flex items-center gap-2 bg-[#FF0031] rounded-lg px-2 py-2">
                               <button
-                                onClick={() => updateQuantity(item.id, halfQuantity - 1, "half")}
+                                onClick={() => handleUpdateQuantityAuth(item.id, halfQuantity - 1, "half")}
                                 className="text-white font-bold text-lg w-6 h-6 flex items-center justify-center"
                               >
                                 −
@@ -457,7 +475,7 @@ export function MenuScreen() {
                                 {halfQuantity}
                               </span>
                               <button
-                                onClick={() => updateQuantity(item.id, halfQuantity + 1, "half")}
+                                onClick={() => handleUpdateQuantityAuth(item.id, halfQuantity + 1, "half")}
                                 className="text-white font-bold text-lg w-6 h-6 flex items-center justify-center"
                               >
                                 +
@@ -469,7 +487,7 @@ export function MenuScreen() {
                           <span className="text-xs text-[#6B6B6B] font-medium">Full</span>
                           {fullQuantity === 0 ? (
                             <button
-                              onClick={() => addToCart({ id: item.id, name: item.name, price: item.fullPrice, portion: "full" })}
+                              onClick={() => handleAddToCartAuth({ id: item.id, name: item.name, price: item.fullPrice, portion: "full" })}
                               className="px-6 py-2 bg-[#FF0031] text-white rounded-lg font-medium hover:bg-[#E5002C] transition-colors"
                             >
                               Add
@@ -477,7 +495,7 @@ export function MenuScreen() {
                           ) : (
                             <div className="flex items-center gap-2 bg-[#FF0031] rounded-lg px-2 py-2">
                               <button
-                                onClick={() => updateQuantity(item.id, fullQuantity - 1, "full")}
+                                onClick={() => handleUpdateQuantityAuth(item.id, fullQuantity - 1, "full")}
                                 className="text-white font-bold text-lg w-6 h-6 flex items-center justify-center"
                               >
                                 −
@@ -486,7 +504,7 @@ export function MenuScreen() {
                                 {fullQuantity}
                               </span>
                               <button
-                                onClick={() => updateQuantity(item.id, fullQuantity + 1, "full")}
+                                onClick={() => handleUpdateQuantityAuth(item.id, fullQuantity + 1, "full")}
                                 className="text-white font-bold text-lg w-6 h-6 flex items-center justify-center"
                               >
                                 +
@@ -500,7 +518,7 @@ export function MenuScreen() {
                       regularQuantity === 0 ? (
                         <div className="flex items-center gap-3 bg-[#F5F5F5] rounded-lg px-3 py-2 w-fit">
                           <button
-                            onClick={() => updateQuantity(item.id, 1)}
+                            onClick={() => handleUpdateQuantityAuth(item.id, 1)}
                             className="text-[#1A1A1A] font-bold text-xl w-6 h-6 flex items-center justify-center"
                             disabled
                           >
@@ -510,7 +528,7 @@ export function MenuScreen() {
                             1
                           </span>
                           <button
-                            onClick={() => addToCart({ id: item.id, name: item.name, price: item.price })}
+                            onClick={() => handleAddToCartAuth({ id: item.id, name: item.name, price: item.price })}
                             className="text-[#FF0031] font-bold text-xl w-6 h-6 flex items-center justify-center"
                           >
                             +
@@ -539,7 +557,7 @@ export function MenuScreen() {
                       // Regular add/quantity buttons
                       regularQuantity === 0 ? (
                         <button
-                          onClick={() => addToCart({ id: item.id, name: item.name, price: item.price })}
+                          onClick={() => handleAddToCartAuth({ id: item.id, name: item.name, price: item.price })}
                           className="px-8 py-2 bg-[#FF0031] text-white rounded-lg font-medium hover:bg-[#E5002C] transition-colors"
                         >
                           Add

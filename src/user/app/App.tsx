@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { RouterProvider, useNavigate, useLocation } from "react-router";
+import { RouterProvider } from "react-router";
 import { router } from "@/app/routes";
 import { CartProvider } from "@/app/context/CartContext";
 import { AuthProvider, useAuth } from "@/app/context/AuthContext";

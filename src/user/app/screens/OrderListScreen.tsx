@@ -5,22 +5,6 @@ import { BottomNav } from "@/app/components/BottomNav";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
 
-type OrderType = "pre-booking" | "takeaway" | "dine-in";
-type OrderStatus = "confirmed" | "preparing" | "ready" | "completed";
-
-interface Order {
-  id: string;
-  orderId: string;
-  restaurantName: string;
-  restaurantLocation: string;
-  orderType: OrderType;
-  status: OrderStatus;
-  totalAmount: number;
-  items: number;
-  date: string;
-  time: string;
-}
-
 export function OrderListScreen() {
   const navigate = useNavigate();
   const { user } = useAuth();

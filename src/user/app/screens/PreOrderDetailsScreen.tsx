@@ -1,12 +1,11 @@
 import { useState, useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useNavigate } from "react-router";
 import { ArrowLeft, Clock } from "lucide-react";
 import { useCart } from "@/app/context/CartContext";
 import { supabase } from "@/lib/supabase";
 
 export function PreOrderDetailsScreen() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { cart, clearCart, getTotalPrice, restaurantId } = useCart();
   const totalAmount = getTotalPrice();
 
