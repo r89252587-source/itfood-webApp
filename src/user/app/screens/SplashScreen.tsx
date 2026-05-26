@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Utensils } from "lucide-react";
-import itFoodLogo from "../../../../graphic/itfood-icon.png";
 
 export function SplashScreen() {
   const navigate = useNavigate();
@@ -18,7 +17,7 @@ export function SplashScreen() {
     <div className="min-h-screen bg-[#FF0031] flex flex-col items-center justify-center px-6">
       <div className="flex flex-col items-center gap-6">
         <div className="bg-white rounded-full p-8 shadow-2xl">
-          <img src={itFoodLogo} alt="itFood Logo" className="w-24 h-24 object-cover" />
+          <img src="/favicon.svg" alt="itFood Logo" className="w-24 h-24 object-cover" />
 
         </div>
 

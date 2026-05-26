@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router";
 import { Utensils, CalendarClock, ShoppingBag, UtensilsCrossed, ArrowRight, Store } from "lucide-react";
-import itFoodLogo from "../../../../graphic/itfood-icon.png";
+import { SEO } from "../components/SEO";
 
 export function LandingScreen() {
   const navigate = useNavigate();
@@ -28,12 +28,12 @@ export function LandingScreen() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
+      <SEO />
       {/* Navigation / Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b border-gray-100 max-w-7xl mx-auto w-full">
         <div className="flex items-center gap-3">
-          <div className="bg-white rounded-full p-1 border shadow-sm">
             <img
-              src={itFoodLogo}
+              src="/favicon.svg"
               alt="itFood Logo"
               className="w-8 h-8 object-contain"
             />
@@ -114,7 +114,7 @@ export function LandingScreen() {
       <footer className="bg-white border-t border-gray-100 py-12 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-baseline gap-2 opacity-80">
-            <img src={itFoodLogo} alt="itFood Logo" className="w-5 h-5 object-contain self-center" />
+            <img src="/favicon.svg" alt="itFood Logo" className="w-5 h-5 object-contain self-center" />
             <span className="text-xl font-bold text-[#1A1A1A]">itFood</span>
             <span className="text-sm font-medium text-[#6B6B6B]">- Scan • Order • Enjoy</span>
           </div>

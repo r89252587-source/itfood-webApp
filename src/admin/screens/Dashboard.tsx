@@ -7,7 +7,6 @@ import {
 } from 'lucide-react';
 import QRManagementView from './QRManagement';
 import { supabase } from '../lib/supabase';
-import itFoodLogo from "../../../graphic/itfood-icon.png";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -175,7 +174,7 @@ function Sidebar({ currentView, setView, onSignOut, isOpen }: { currentView: str
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="logo">
-        <img src={itFoodLogo} alt="itFood Logo" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+        <img src="/favicon.svg" alt="itFood Logo" style={{ width: 28, height: 28, objectFit: 'contain' }} />
         <span>itFood - admin</span>
       </div>
       <ul className="nav-links">
@@ -1013,6 +1012,11 @@ function SettingsView({ restaurant, fetchRestaurant, onProfileCompleted }: { res
   const [openTime, setOpenTime] = useState('10:00');
   const [closeTime, setCloseTime] = useState('23:00');
   const [mapPosition, setMapPosition] = useState<any>(null);
+  const [images, setImages] = useState<string[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
+  const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+  const [slugSuggestions, setSlugSuggestions] = useState<string[]>([]);
 
   function parseOpeningHours(value: string | null | undefined) {
     const raw = (value || '').trim();
@@ -1027,6 +1031,7 @@ function SettingsView({ restaurant, fetchRestaurant, onProfileCompleted }: { res
   useEffect(() => {
     const base = restaurant || {
       name: '',
+      slug: '',
       cuisine: '',
       location: '',
       latitude: null,
@@ -1037,9 +1042,11 @@ function SettingsView({ restaurant, fetchRestaurant, onProfileCompleted }: { res
       rating: '',
       description: '',
       image: '',
+      images: [],
       services: { preBooking: true, takeaway: true, dineIn: true },
     };
     setFormData({ ...base });
+    setIsSlugManuallyEdited(Boolean(base.slug));
     const parsed = parseOpeningHours(base.opening_hours);
     setOpenTime(parsed.open);
     setCloseTime(parsed.close);
@@ -1049,7 +1056,183 @@ function SettingsView({ restaurant, fetchRestaurant, onProfileCompleted }: { res
     } else {
       setMapPosition(null);
     }
+
+    let parsedImages: string[] = [];
+    if (base.images && Array.isArray(base.images)) {
+      parsedImages = base.images;
+    } else if (base.images && typeof base.images === 'string') {
+      try { parsedImages = JSON.parse(base.images); } catch (e) { }
+    } else if (base.image) {
+      parsedImages = [base.image];
+    }
+    setImages(parsedImages);
   }, [restaurant]);
+
+  useEffect(() => {
+    if (!formData?.slug) {
+      setSlugStatus('idle');
+      setSlugSuggestions([]);
+      return;
+    }
+
+    if (restaurant && restaurant.slug === formData.slug) {
+      setSlugStatus('available');
+      setSlugSuggestions([]);
+      return;
+    }
+
+    setSlugStatus('checking');
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        let query = supabase.from('restaurants').select('id').eq('slug', formData.slug);
+        if (formData.id) {
+          query = query.neq('id', formData.id);
+        }
+        const { data, error } = await query;
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          setSlugStatus('taken');
+          const suggestions: string[] = [];
+          for (let i = 1; i <= 10; i++) {
+            const checkSlug = `${formData.slug}-${i}`;
+            let q = supabase.from('restaurants').select('id').eq('slug', checkSlug);
+            if (formData.id) q = q.neq('id', formData.id);
+            const { data: cData } = await q;
+            if (!cData || cData.length === 0) {
+              suggestions.push(checkSlug);
+              if (suggestions.length === 2) break;
+            }
+          }
+          setSlugSuggestions(suggestions);
+        } else {
+          setSlugStatus('available');
+          setSlugSuggestions([]);
+        }
+      } catch (err) {
+        console.error('Error checking slug:', err);
+        setSlugStatus('idle');
+      }
+    }, 600);
+
+    return () => clearTimeout(timeoutId);
+  }, [formData?.slug, formData?.id, restaurant?.slug]);
+
+  const compressImage = (file: File, maxSizeKB: number = 700): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      if (file.size <= maxSizeKB * 1024) {
+        resolve(file);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          const maxDim = 1920;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height *= maxDim / width));
+              width = maxDim;
+            } else {
+              width = Math.round((width *= maxDim / height));
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(file);
+            return;
+          }
+
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+
+          let quality = 0.9;
+          const compress = () => {
+            canvas.toBlob((blob) => {
+              if (!blob) {
+                resolve(file);
+                return;
+              }
+              if (blob.size > maxSizeKB * 1024 && quality > 0.1) {
+                quality -= 0.15;
+                compress();
+              } else {
+                const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                  type: 'image/jpeg',
+                  lastModified: Date.now(),
+                });
+                resolve(compressedFile);
+              }
+            }, 'image/jpeg', quality);
+          };
+          compress();
+        };
+        img.onerror = (error) => reject(error);
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    if (images.length + files.length > 4) {
+      alert("You can only upload up to 4 images.");
+      return;
+    }
+
+    setUploadingImage(true);
+    const newImages = [...images];
+
+    try {
+      for (let file of files) {
+        file = await compressImage(file, 700);
+
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('restaurant_images')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage
+          .from('restaurant_images')
+          .getPublicUrl(filePath);
+
+        newImages.push(publicUrlData.publicUrl);
+      }
+
+      setImages(newImages);
+      setFormData((prev: any) => ({ ...prev, image: newImages[0] || '', images: newImages }));
+    } catch (err: any) {
+      alert(err.message || "Failed to upload image");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    const newImages = images.filter((_, i) => i !== index);
+    setImages(newImages);
+    setFormData((prev: any) => ({ ...prev, image: newImages[0] || '', images: newImages }));
+  };
 
   const handleLocationUpdate = async (lat: number, lng: number) => {
     setFormData((prev: any) => ({ ...prev, latitude: lat, longitude: lng }));
@@ -1109,11 +1292,132 @@ function SettingsView({ restaurant, fetchRestaurant, onProfileCompleted }: { res
         <div className="form-row">
           <div className="form-group">
             <label>Restaurant Name</label>
-            <input value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+            <input value={formData.name || ''} onChange={e => {
+              const val = e.target.value;
+              setFormData((prev: any) => {
+                const nextData = { ...prev, name: val };
+                if (!isSlugManuallyEdited) {
+                  nextData.slug = val
+                    .toLowerCase()
+                    .replace(/&/g, ' and ')
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+                }
+                return nextData;
+              });
+            }} />
           </div>
+          <div className="form-group">
+            <label>Restaurant Slug (URL Handle)</label>
+            <input
+              placeholder="e.g. sujeett"
+              value={formData.slug || ''}
+              onChange={e => {
+                setIsSlugManuallyEdited(true);
+                const rawSlug = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                setFormData((prev: any) => ({ ...prev, slug: rawSlug }));
+              }}
+              style={{
+                borderColor: slugStatus === 'taken' ? '#FC0A3D' : slugStatus === 'available' ? '#10B981' : undefined,
+                borderWidth: slugStatus === 'taken' || slugStatus === 'available' ? '2px' : '1px'
+              }}
+            />
+            <span style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '0.25rem', display: 'block', fontWeight: 500 }}>
+              Preview: <span style={{ color: '#FC0A3D' }}>https://www.itfood.in/restaurant/{formData.slug || 'slug'}</span>
+            </span>
+            {slugStatus === 'checking' && (
+               <span style={{ fontSize: '0.8rem', color: '#F59E0B', display: 'block', marginTop: '0.25rem' }}>Checking availability...</span>
+            )}
+            {slugStatus === 'available' && formData.slug && (
+               <span style={{ fontSize: '0.8rem', color: '#10B981', display: 'block', marginTop: '0.25rem' }}>✓ Slug is available!</span>
+            )}
+            {slugStatus === 'taken' && (
+               <div style={{ fontSize: '0.8rem', color: '#FC0A3D', marginTop: '0.25rem' }}>
+                 ✕ Slug is taken. Try: {slugSuggestions.map(s => (
+                   <span key={s} onClick={() => {
+                     setFormData((prev: any) => ({...prev, slug: s}));
+                     setIsSlugManuallyEdited(true);
+                   }} style={{ color: 'var(--primary)', cursor: 'pointer', marginLeft: '0.5rem', textDecoration: 'underline' }}>{s}</span>
+                 ))}
+               </div>
+            )}
+          </div>
+        </div>
+
+        <div className="form-row">
           <div className="form-group">
             <label>Cuisine Type</label>
             <input value={formData.cuisine || ''} onChange={e => setFormData({ ...formData, cuisine: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>Contact Phone</label>
+            <input value={formData.phone || ''} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+          </div>
+        </div>
+
+        <div className="form-row">
+          <div className="form-group">
+            <label>Opening Hours</label>
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              <input type="time" value={openTime} onChange={e => setOpenTime(e.target.value)} />
+              <span style={{ color: '#64748B', fontWeight: 600 }}>to</span>
+              <input type="time" value={closeTime} onChange={e => setCloseTime(e.target.value)} />
+            </div>
+          </div>
+          <div className="form-group">
+            <label>Preparation Time</label>
+            <input placeholder="20-25 min" value={formData.prep_time || ''} onChange={e => setFormData({ ...formData, prep_time: e.target.value })} />
+          </div>
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Rating (Display only)</label>
+            <input readOnly style={{ backgroundColor: '#F8FAFC', color: '#64748B' }} value={formData.rating || ''} />
+          </div>
+        </div>
+        <div className="form-group">
+          <label>Restaurant Description</label>
+          <textarea value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} rows={4} />
+        </div>
+        <div className="form-group">
+          <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+            <span>Restaurant Images (Max 4, Min 1 mandatory)</span>
+            <span style={{ fontSize: '0.875rem', color: '#64748B' }}>{images.length} / 4 uploaded</span>
+          </label>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+            {images.map((img, idx) => (
+              <div key={idx} style={{ position: 'relative', width: '100px', height: '100px', borderRadius: '0.5rem', overflow: 'hidden', border: '1px solid #E2E8F0' }}>
+                <img src={img} alt={`Restaurant ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <button
+                  type="button"
+                  onClick={() => removeImage(idx)}
+                  style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+            {images.length < 4 && (
+              <label style={{ width: '100px', height: '100px', borderRadius: '0.5rem', border: '2px dashed #CBD5E1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: uploadingImage ? 'not-allowed' : 'pointer', background: '#F8FAFC', transition: 'all 0.2s' }}>
+                {uploadingImage ? <RefreshCw size={24} style={{ animation: 'spin 1s linear infinite', color: '#94A3B8' }} /> : <Plus size={24} color="#94A3B8" />}
+                <span style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '0.5rem' }}>Upload</span>
+                <input type="file" accept="image/*" multiple onChange={handleImageUpload} style={{ display: 'none' }} disabled={uploadingImage} />
+              </label>
+            )}
+          </div>
+        </div>
+        <div className="form-group">
+          <label style={{ marginBottom: '0.5rem' }}>Enabled Services</label>
+          <div className="services-toggles" style={{ display: 'flex', gap: '2rem', background: '#F8FAFC', padding: '1.25rem', borderRadius: '0.75rem' }}>
+            <label className="checkbox-label">
+              <input type="checkbox" checked={formData.services?.preBooking || false} onChange={e => setFormData({ ...formData, services: { ...formData.services, preBooking: e.target.checked } })} /> Pre-Order
+            </label>
+            <label className="checkbox-label">
+              <input type="checkbox" checked={formData.services?.takeaway || false} onChange={e => setFormData({ ...formData, services: { ...formData.services, takeaway: e.target.checked } })} /> Takeaway
+            </label>
+            <label className="checkbox-label">
+              <input type="checkbox" checked={formData.services?.dineIn || false} onChange={e => setFormData({ ...formData, services: { ...formData.services, dineIn: e.target.checked } })} /> Dine-In
+            </label>
           </div>
         </div>
         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
@@ -1146,52 +1450,6 @@ function SettingsView({ restaurant, fetchRestaurant, onProfileCompleted }: { res
             style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #E2E8F0', outline: 'none' }}
           />
         </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label>Opening Hours</label>
-            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-              <input type="time" value={openTime} onChange={e => setOpenTime(e.target.value)} />
-              <span style={{ color: '#64748B', fontWeight: 600 }}>to</span>
-              <input type="time" value={closeTime} onChange={e => setCloseTime(e.target.value)} />
-            </div>
-          </div>
-          <div className="form-group">
-            <label>Contact Phone</label>
-            <input value={formData.phone || ''} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
-          </div>
-        </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label>Preparation Time</label>
-            <input placeholder="20-25 min" value={formData.prep_time || ''} onChange={e => setFormData({ ...formData, prep_time: e.target.value })} />
-          </div>
-          <div className="form-group">
-            <label>Rating (Display only)</label>
-            <input readOnly style={{ backgroundColor: '#F8FAFC', color: '#64748B' }} value={formData.rating || ''} />
-          </div>
-        </div>
-        <div className="form-group">
-          <label>Restaurant Description</label>
-          <textarea value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} rows={4} />
-        </div>
-        <div className="form-group">
-          <label>Cover Image URL</label>
-          <input value={formData.image || ''} onChange={e => setFormData({ ...formData, image: e.target.value })} />
-        </div>
-        <div className="form-group">
-          <label style={{ marginBottom: '0.5rem' }}>Enabled Services</label>
-          <div className="services-toggles" style={{ display: 'flex', gap: '2rem', background: '#F8FAFC', padding: '1.25rem', borderRadius: '0.75rem' }}>
-            <label className="checkbox-label">
-              <input type="checkbox" checked={formData.services?.preBooking || false} onChange={e => setFormData({ ...formData, services: { ...formData.services, preBooking: e.target.checked } })} /> Pre-Order
-            </label>
-            <label className="checkbox-label">
-              <input type="checkbox" checked={formData.services?.takeaway || false} onChange={e => setFormData({ ...formData, services: { ...formData.services, takeaway: e.target.checked } })} /> Takeaway
-            </label>
-            <label className="checkbox-label">
-              <input type="checkbox" checked={formData.services?.dineIn || false} onChange={e => setFormData({ ...formData, services: { ...formData.services, dineIn: e.target.checked } })} /> Dine-In
-            </label>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -1223,12 +1481,104 @@ function SettingsView({ restaurant, fetchRestaurant, onProfileCompleted }: { res
       }
 
       // Ensure required fields for NOT NULL constraints
-      if (!submissionData.image) {
-        submissionData.image = 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80';
+      if (!submissionData.image || images.length === 0) {
+        throw new Error('At least 1 restaurant image is mandatory.');
       }
+
+      submissionData.images = images; // Add images array to submission
 
       if (!submissionData.distance) {
         submissionData.distance = '0.5 km';
+      }
+
+      // Ensure Name and Slug are present and mandatory
+      if (!submissionData.name || !submissionData.name.trim()) {
+        throw new Error('Restaurant Name is required and mandatory.');
+      }
+      
+      let baseName = submissionData.name.trim();
+      let uniqueName = baseName;
+      let nameIsUnique = false;
+      let nameAttempts = 0;
+
+      while (!nameIsUnique && nameAttempts < 50) {
+        let nameQuery = supabase
+          .from('restaurants')
+          .select('id')
+          .ilike('name', uniqueName);
+
+        if (formData.id) {
+          nameQuery = nameQuery.neq('id', formData.id);
+        }
+
+        const { data: nameConflicts, error: nameError } = await nameQuery;
+        if (nameError) {
+          throw new Error('Database error checking name uniqueness: ' + nameError.message);
+        }
+
+        if (!nameConflicts || nameConflicts.length === 0) {
+          nameIsUnique = true;
+        } else {
+          nameAttempts++;
+          uniqueName = `${baseName} ${nameAttempts + 1}`;
+        }
+      }
+
+      // Ensure a slug is present, or fallback to slugifying the name
+      let baseSlug = (submissionData.slug || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '')
+        .trim();
+
+      if (!baseSlug) {
+        baseSlug = uniqueName
+          .toLowerCase()
+          .replace(/&/g, ' and ')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+      }
+
+      let uniqueSlug = baseSlug;
+      let slugIsUnique = false;
+      let slugAttempts = 0;
+
+      while (!slugIsUnique && slugAttempts < 50) {
+        let slugQuery = supabase
+          .from('restaurants')
+          .select('id')
+          .eq('slug', uniqueSlug);
+
+        if (formData.id) {
+          slugQuery = slugQuery.neq('id', formData.id);
+        }
+
+        const { data: slugConflicts, error: slugError } = await slugQuery;
+        if (slugError) {
+          throw new Error('Database error checking slug uniqueness: ' + slugError.message);
+        }
+
+        if (!slugConflicts || slugConflicts.length === 0) {
+          slugIsUnique = true;
+        } else {
+          slugAttempts++;
+          uniqueSlug = `${baseSlug}-${slugAttempts}`;
+        }
+      }
+
+      // Assign the unique name and slug
+      submissionData.name = uniqueName;
+      submissionData.slug = uniqueSlug;
+
+      // If they changed during uniqueness checks, notify the user or update form
+      let alertMessage = '';
+      if (uniqueName !== baseName) {
+        alertMessage += `Restaurant name was auto-adjusted to "${uniqueName}" to ensure uniqueness.\n`;
+      }
+      if (uniqueSlug !== baseSlug) {
+        alertMessage += `Restaurant slug was auto-adjusted to "${uniqueSlug}" to ensure uniqueness.\n`;
+      }
+      if (alertMessage) {
+        alert(alertMessage);
       }
 
       const timeoutMs = 15000;

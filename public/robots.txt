@@ -1,0 +1,10 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Disallowed paths
+Disallow: /admin
+Disallow: /api
+
+# Sitemap URL
+Sitemap: https://www.itfood.in/sitemap.xml

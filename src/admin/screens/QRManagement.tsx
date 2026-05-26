@@ -8,6 +8,29 @@ export default function QRManagementView({ restaurantId }: { restaurantId: strin
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [tableNumber, setTableNumber] = useState('');
+  const [logoBase64, setLogoBase64] = useState<string>('');
+
+  useEffect(() => {
+    // Convert imported logo asset to base64 data URI to prevent Canvas/SVG export security issues
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = "/favicon.svg";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        try {
+          const dataUrl = canvas.toDataURL("image/png");
+          setLogoBase64(dataUrl);
+        } catch (e) {
+          console.error("Failed to convert logo to base64:", e);
+        }
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (restaurantId) fetchQrCodes();
@@ -100,6 +123,73 @@ export default function QRManagementView({ restaurantId }: { restaurantId: strin
     img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
   }
 
+  function downloadGraphicQR(id: string, tableNum: string) {
+    const svg = document.getElementById(`qr-svg-${id}`);
+    if (!svg) return;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const qrImg = new Image();
+    qrImg.onload = () => {
+      const templateImg = new Image();
+      templateImg.crossOrigin = "anonymous";
+      templateImg.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = templateImg.width;
+        canvas.height = templateImg.height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          // 1. Draw the template flyer first
+          ctx.drawImage(templateImg, 0, 0);
+          
+          // 2. Draw the QR code on top at the exact center area
+          // Bounding Box on 1024x1536 canvas:
+          // X: 343 to 686 (Width = 343)
+          // Y: 610 to 953 (Height = 343)
+          ctx.drawImage(qrImg, 343, 610, 343, 343);
+          
+          // 3. Draw a stylized Table Number Badge at the top left
+          ctx.save();
+          const badgeX = 60;
+          const badgeY = 60;
+          const badgeW = 200;
+          const badgeH = 60;
+          const radius = 15;
+          
+          ctx.beginPath();
+          ctx.moveTo(badgeX + radius, badgeY);
+          ctx.lineTo(badgeX + badgeW - radius, badgeY);
+          ctx.quadraticCurveTo(badgeX + badgeW, badgeY, badgeX + badgeW, badgeY + radius);
+          ctx.lineTo(badgeX + badgeW, badgeY + badgeH - radius);
+          ctx.quadraticCurveTo(badgeX + badgeW, badgeY + badgeH, badgeX + badgeW - radius, badgeY + badgeH);
+          ctx.lineTo(badgeX + radius, badgeY + badgeH);
+          ctx.quadraticCurveTo(badgeX, badgeY + badgeH, badgeX, badgeY + badgeH - radius);
+          ctx.lineTo(badgeX, badgeY + radius);
+          ctx.quadraticCurveTo(badgeX, badgeY, badgeX + radius, badgeY);
+          ctx.closePath();
+          
+          ctx.fillStyle = "white";
+          ctx.fill();
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = "#FF0031"; // Brand Red
+          ctx.stroke();
+          
+          ctx.fillStyle = "#1A1A1A";
+          ctx.font = "bold 26px Arial, sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(`TABLE ${tableNum}`, badgeX + badgeW / 2, badgeY + badgeH / 2);
+          ctx.restore();
+        }
+        const pngFile = canvas.toDataURL("image/png");
+        const downloadLink = document.createElement("a");
+        downloadLink.download = `Table-${tableNum}-Flyer.png`;
+        downloadLink.href = `${pngFile}`;
+        downloadLink.click();
+      };
+      templateImg.src = "/qr-template.png";
+    };
+    qrImg.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+  }
+
   return (
     <div className="animate-fade-in" style={{ padding: '1rem' }}>
       <div className="content-card premium-card" style={{ marginBottom: '2rem' }}>
@@ -150,23 +240,42 @@ export default function QRManagementView({ restaurantId }: { restaurantId: strin
                     size={160} 
                     level="H"
                     includeMargin={false}
+                    imageSettings={logoBase64 ? {
+                      src: logoBase64,
+                      x: undefined,
+                      y: undefined,
+                      height: 35,
+                      width: 35,
+                      excavate: true
+                    } : undefined}
                   />
                 </div>
                 
-                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'stretch' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                    <button 
+                      onClick={() => downloadQR(qr.id, qr.table_number)}
+                      className="btn premium-hover" 
+                      style={{ flex: 1, background: '#F1F5F9', color: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.5rem', fontSize: '0.875rem' }}
+                      title="Download raw QR Code only"
+                    >
+                      <Download size={16} /> Raw QR
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(qr.id)}
+                      className="btn premium-hover" 
+                      style={{ background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                      title="Delete QR"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                   <button 
-                    onClick={() => downloadQR(qr.id, qr.table_number)}
+                    onClick={() => downloadGraphicQR(qr.id, qr.table_number)}
                     className="btn premium-hover" 
-                    style={{ background: '#F1F5F9', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                    style={{ background: '#FF0031', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.65rem 1rem', fontSize: '0.875rem', fontWeight: '500', borderRadius: '0.5rem', border: 'none', cursor: 'pointer' }}
                   >
-                    <Download size={16} /> Download
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(qr.id)}
-                    className="btn premium-hover" 
-                    style={{ background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', fontSize: '0.875rem' }}
-                  >
-                    <Trash2 size={16} /> Delete
+                    <Download size={16} /> Download Stand Flyer
                   </button>
                 </div>
               </div>

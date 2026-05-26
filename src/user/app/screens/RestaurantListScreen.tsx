@@ -4,6 +4,7 @@ import { Search, MapPin, Star, Clock, CalendarClock, ShoppingBag, UtensilsCrosse
 import { BottomNav } from "@/app/components/BottomNav";
 import { useAuth } from "@/app/context/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { SEO } from "../components/SEO";
 
 type OrderType = "pre-booking" | "takeaway" | "dine-in";
 
@@ -88,6 +89,10 @@ export function RestaurantListScreen() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] pb-20">
+      <SEO 
+        title="All Restaurants | itFood" 
+        description="Browse and order from the best restaurants near you on itFood." 
+      />
       {/* Header */}
       <div className="bg-white px-6 pt-12 pb-6 shadow-sm">
         <div className="flex items-center gap-3 mb-4 max-w-3xl mx-auto">

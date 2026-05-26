@@ -32,6 +32,10 @@ export const router = createBrowserRouter([
     Component: MenuScreen,
   },
   {
+    path: "/restaurant/:restaurantId",
+    Component: MenuScreen,
+  },
+  {
     path: "/cart",
     Component: CartScreen,
   },

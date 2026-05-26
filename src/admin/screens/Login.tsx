@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Utensils, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import itFoodLogo from "../../../graphic/itfood-icon.png";
 
 export default function Login({ onLogin, authError }: { onLogin: () => void; authError?: string | null }) {
   const [email, setEmail] = useState('');
@@ -26,7 +25,7 @@ export default function Login({ onLogin, authError }: { onLogin: () => void; aut
       <div className="login-card glass-effect" style={{ maxWidth: '440px', backgroundColor: '#FFFFFF', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }}>
         <div className="login-logo-container">
           <div className="logo-icon-wrapper">
-            <img src={itFoodLogo} alt="itFood Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '10px' }} />
+            <img src="/favicon.svg" alt="itFood Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '10px' }} />
           </div>
         </div>
         <h2 className="login-heading" style={{ color: '#000000' }}>Welcome Back</h2>

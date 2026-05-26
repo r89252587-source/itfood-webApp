@@ -5,6 +5,7 @@ import { useCart } from "@/app/context/CartContext";
 import { useAuth } from "@/app/context/AuthContext";
 import { Input } from "@/app/components/ui/input";
 import { supabase } from "@/lib/supabase";
+import { SEO } from "../components/SEO";
 
 type Category = "all" | "veg" | "non-veg";
 type FoodType = "all" | "starter" | "main" | "bread" | "dessert" | "beverage";
@@ -62,21 +63,31 @@ export function MenuScreen() {
       try {
         if (!restaurantId) return;
 
-        // Fetch restaurant details
-        const { data: restaurantData, error: restaurantError } = await supabase
-          .from("restaurants")
-          .select("*")
-          .eq("id", restaurantId)
-          .single();
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(restaurantId);
+        
+        let query = supabase.from("restaurants").select("*");
+        if (isUUID) {
+          query = query.eq("id", restaurantId);
+        } else {
+          query = query.or(`slug.eq.${restaurantId},name.ilike.%${restaurantId.replace(/-/g, '%')}%`);
+        }
+        
+        const { data: restaurantData, error: restaurantError } = await query.limit(1).maybeSingle();
 
         if (restaurantError) throw restaurantError;
+        if (!restaurantData) {
+          console.error("Restaurant not found for:", restaurantId);
+          setLoading(false);
+          return;
+        }
+        
         setRestaurant(restaurantData);
 
-        // Fetch menu items
+        // Fetch menu items using the actual UUID
         const { data: menuData, error: menuError } = await supabase
           .from("menu_items")
           .select("*")
-          .eq("restaurant_id", restaurantId);
+          .eq("restaurant_id", restaurantData.id);
 
         if (menuError) throw menuError;
         
@@ -146,6 +157,14 @@ export function MenuScreen() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] pb-24">
+      {restaurant && (
+        <SEO 
+          title={`${restaurant.name} | itFood`}
+          description={`Order from ${restaurant.name} on itFood. Cuisine: ${restaurant.cuisine || 'Multi-Cuisine'}.`}
+          image={restaurant.image}
+          type="restaurant"
+        />
+      )}
       {/* Header with Restaurant Image */}
       <div className="relative">
         <div className="h-48 overflow-hidden">
